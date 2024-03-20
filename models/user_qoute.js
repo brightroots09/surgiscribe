@@ -1,47 +1,38 @@
-const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('users', {
+  return sequelize.define('user_quote', { // <-- Change 'user_qoute' to 'user_quote'
     id: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
     },
-     type: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    username: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
-    email: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
-    mobile_number: {
+    user_id: {
       type: DataTypes.INTEGER,
       allowNull: true
     },
-    loginTime: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
+    date: {
+      type: DataTypes.DATE,
+      allowNull: true // Change this if you want to allow null values for date
     },
-    images: {
-      type: DataTypes.STRING(255),
-      allowNull: true
-    },
-    password: {
+    rep: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
-    fcm_token: {
+    facility: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    manufacturer: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    discount: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
   }, {
     sequelize,
-    tableName: 'users',
+    tableName: 'user_quote', // <-- Change the table name here
     timestamps: true,
     indexes: [
       {
@@ -52,7 +43,6 @@ module.exports = function(sequelize, DataTypes) {
           { name: "id" },
         ]
       },
-    
     ]
   });
 };

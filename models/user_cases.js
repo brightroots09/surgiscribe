@@ -1,47 +1,52 @@
 const Sequelize = require('sequelize');
 module.exports = function(sequelize, DataTypes) {
-  return sequelize.define('users', {
+  return sequelize.define('user_cases', {
     id: {
       autoIncrement: true,
       type: DataTypes.INTEGER,
       allowNull: false,
       primaryKey: true
     },
-     type: {
+    user_id : {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: false
     },
-    username: {
+    case_name: {
+      type: DataTypes.STRING(125),
+      allowNull: true
+    },
+    facility	: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
-    email: {
+    dos: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
-    mobile_number: {
-      type: DataTypes.INTEGER,
-      allowNull: true
-    },
-    loginTime: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-    },
-    images: {
+    surgeon: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
-    password: {
+    patient_identifier: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
-    fcm_token: {
+    manufacturer: {
       type: DataTypes.STRING(255),
       allowNull: true
     },
+    procedures: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    notes: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+
   }, {
     sequelize,
-    tableName: 'users',
+    tableName: 'user_cases',
     timestamps: true,
     indexes: [
       {
@@ -52,7 +57,6 @@ module.exports = function(sequelize, DataTypes) {
           { name: "id" },
         ]
       },
-    
     ]
   });
 };

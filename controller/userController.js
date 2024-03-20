@@ -9,7 +9,8 @@ var jwt = require("jsonwebtoken");
 const chatconstants = require("../models/chatconstants");
 const { Sequelize,Op } = require('sequelize');
 const notification = require("../models/notification");
-
+const fs = require('fs');
+const path = require('path');
 
 const secretCryptoKey = "jwtSecretKey";
 db.users.hasMany(db.chatconstants,{foreignKey:'senderId'});
@@ -32,6 +33,8 @@ module.exports={
                 email: req.body.email,
                 mobile_number: req.body.mobile_number,
                 password: req.body.password,
+                type: req.body.type,
+
              };
 
              const nonRequired = {
@@ -63,6 +66,8 @@ module.exports={
                 mobile_number:getdata.mobile_number,
                 email: getdata.email,
                 password: password,
+                type: getdata.type,
+
             });
     
             const userDetail = await db.users.findOne({
@@ -176,19 +181,24 @@ module.exports={
         try {
             const required = {
                 email: req.body.email,
-                password: req.body.password,};
+                password: req.body.password,
+                type: req.body.type,
+
+              
+              };
             const nonRequired = {deviceToken:req.body.deviceToken,};
 
             const getdata = await helper.vaildObject(required, nonRequired, res)
             let verify_email = await db.users.findOne({
                 where: {
                     email: getdata.email,
-                  
+                    type: getdata.type,
+
                 },
                 raw: true
             })
             if (verify_email == null) {
-                return helper.error(res,"email does not exits",verify_email)
+                return helper.error(res,"email with this type does not exits",verify_email)
             };
             let time = helper.unixTimestamp();
 
@@ -255,202 +265,88 @@ module.exports={
     },
 
     edit_user_profile: async (req, res) => {
-
         try {
-            const required = {};
-            const nonRequired = {
-                first_name: req.body.first_name,
-                last_name:req.body.last_name,
-            
-                country: req.body.country,
-                phone: req.body.phone,
-                images: req.body.images,
-                dob:req.body.dob,
-                totalexperience:req.body.totalexperience,
-                height:req.body.height,
-                gender:req.body.gender,
-                ratingtype:req.body.ratingtype,
-                rating:req.body.rating,
-                city:req.body.city,
-                about:req.body.about,
-                desired_partner:req.body.desired_partner,
-                playingstyle:req.body.playingstyle,
-                dominnant_hand:req.body.dominnant_hand,
-                country_flag:req.body.country_flag,
-                location_range:req.body.location_range,
-              
+            const required = {
             };
-
-            const getdata = await helper.vaildObject(required, nonRequired, res)
-
-     
-if (req.files && req.files.images ) {
-  var images = req.files.images;
-
-  if (images) {
-   req.body.images = (await helper.fileUpload(images, "images"));
- 
-  }
-}
-            const ligin_user_profile_change = await db.users.update({
-                first_name: getdata.first_name,
-                last_name:getdata.last_name,
-          
-                country: getdata.country,
-                phone: getdata.phone,
+            const nonRequired = {
+              email: req.body.email,
+              mobile_number: req.body.mobile_number,
+            };
+            const getdata = await helper.vaildObject(required, nonRequired, res)         
+              if (req.files && req.files.images ) {
+                var images = req.files.images;
+                if (images) {
+                req.body.images = (await helper.fileUpload(images, "images"));
+                }
+              }
+            await db.users.update({
+                email: getdata.email,
+                mobile_number:getdata.mobile_number,
                 images: req.body.images,
-                dob:getdata.dob,
-                totalexperience:getdata.totalexperience,
-                height:getdata.height,
-                country_flag:getdata.country_flag,
-                gender:getdata.gender,
-                ratingtype:getdata.ratingtype,
-                rating:getdata.rating,
-                city:getdata.city,
-                about:getdata.about,
-                desired_partner:getdata.desired_partner,
-                playingstyle:getdata.playingstyle,
-                dominnant_hand:getdata.dominnant_hand,
-                location_range:req.body.location_range
             }, {
                 where: {
                     id: req.user.id
                 }
-
             })
             const find_login_user_new_profie = await db.users.findOne({
-              
                 where: {
                     id: req.user.id
                 },
                 raw: true
-
             })
             return helper.success(res, "Profile updated  successfully", find_login_user_new_profie)
         } catch (error) {
            console.log(error);
-
-
         }
     },
-
-
 
     forgot_password: async (req, res) => {
         try {
             const required = {
-                // roolType: req.body.roolType,
-                email: req.body.email
+                mobile_number: req.body.mobile_number
             };
 
             const non_required = {
-                // roolType: req.body.roolType,
-                // security_key: req.headers.security_key
+               
             };
 
             let requestdata = await helper.vaildObject(required, non_required);
 
             let existingUser = await db.users.findOne({
                 where: {
-                    email: requestdata.email,
-                    //   role: requestdata.roolType
+                  mobile_number: requestdata.mobile_number,
                 },
                 raw: true
             });
             if (!existingUser)
-            return helper.error(res,"Email does not exist")
+            return helper.error(res,"Mobile Number does not exist.")
+            const randomNum = Math.random() * 9000
+            const otp = Math.floor(1000 + randomNum)
+           
+            return helper.success(res, "Otp Sent  successfully", {otp:otp})
 
-            existingUser.forgotPasswordHash = helper.createSHA1();
-
-            let html = `Click here to change your password <a href="${
-                req.protocol
-                }://${req.get("host")}/api/forgot_url/${
-                existingUser.forgotPasswordHash
-                }"> Click</a>`;
-
-            let emailData = {
-                to: requestdata.email,
-                subject: "Transit Forgot Password",
-                html: html
-            };
-            console.log("9999999999999", existingUser.forgotPasswordHash);
-
-            await helper.sendEmail(emailData);
-            const ligin_user_profile_change = await db.users.update({
-                forgotPasswordHash: existingUser.forgotPasswordHash,
-            }, {
-                where: {
-                    email: requestdata.email
-                }
-
-            })
-            return helper.success(
-                res,
-                "Forgot Password email sent successfully.", {}
-            );
         } catch (err) {
             return helper.error(res, err);
         }
     },
 
-    forgotUrl: async (req, res) => {
-        try {
-            console.log("77777777777777777777777", req.params.hash);
-
-            let user_detail = await db.users.findOne({
-                where: {
-                    forgotPasswordHash: req.params.hash
-                }
-            });
-            console.log("0000000000000000000000000", user_detail);
-
-            if (user_detail) {
-                console.log("111111111111111111111111111");
-
-                res.render("reset_password", {
-                    title: "Transit",
-                    response: user_detail,
-                    msg: req.flash('msg'),
-                    hash: req.params.hash
-                });
-            } else {
-                const html = `
-                <br/>
-                <br/>
-                <br/>
-                <div style="font-size: 50px;" >
-                    <b><center>Link has been expired!</center><p>
-                </div>
-              `;
-                res.status(403).send(html);
-            }
-        } catch (err) {
-            throw err;
-        }
-    },
-    
     resetPassword: async (req, res) => {
         try {
             const {
                 password,
-                forgotPasswordHash
+                mobile_number
             } = {
                 ...req.body
             };
-
             const forgot_user = await db.users.findOne({
                 where: {
-                    forgotPasswordHash
+                  mobile_number
                 },
                 raw: true
             });
             if (!forgot_user) throw "Something went wrong.";
-            console.log("================================", password);
-
             const updateObj = {};
             updateObj.password = await bcrypt.hash(password, 12)
-           
-            
             updateObj.forgotPasswordHash = "";
             updateObj.id = forgot_user.id;
             const ligin_user_profile_change = await db.users.update({
@@ -460,11 +356,7 @@ if (req.files && req.files.images ) {
                 where: {
                     id: forgot_user.id
                 }
-
             })
-
-            console.log("111111111111111111111111111", ligin_user_profile_change);
-
             if (ligin_user_profile_change) {
                 return helper.success(res, "Password updated successfully.", {});
 
@@ -473,7 +365,6 @@ if (req.files && req.files.images ) {
             }
         } catch (err) {
             return helper.error(res, err);
-
         }
     },
 
@@ -510,460 +401,21 @@ if (req.files && req.files.images ) {
         }
     },
 
+
     userlist:async (req,res) =>{
         try {
             const finduser = await db.users.findAll({
                 where:{
-                    role:i
+                    type:2
                 }
             })
+            return helper.success(res, "All Records .", finduser)
+
         } catch (error) {
-            return helper.success(res, "privacy_policy ", finduser)
+            return helper.error(res, "privacy_policy ", error)
         }
     },
 
-    friendRequest: async (req, res) => {
-      try {
-        const senderId = req.user.id; // Sender ID from the token
-        const receiverId = req.body.receiverId; // Receiver ID from the request body
-    
-        // Check if a friend request already exists between sender and receiver
-        const existingRequest = await db.chatconstants.findOne({
-          where: {
-            senderId: senderId,
-            receiverId: receiverId,
-            status: 1, // Status 1 indicates a friend request
-          },
-        });
-    
-        if (existingRequest) {
-          // A friend request already exists, you can handle this case accordingly
-          return helper.error(res, "Friend request already sent.");
-        }
-    
-        // If there's no existing request, create a new friend request
-        const request = await db.chatconstants.create({
-          senderId: senderId,
-          receiverId: receiverId,
-          status: 1, // Status 1 indicates a friend request
-        });
-    
-        // Send a push notification to the receiver
-        const receiverUser = await db.users.findByPk(receiverId, {
-          attributes: ['deviceToken', 'deviceType'],
-        });
-    
-        if (receiverUser) {
-          const { deviceToken, deviceType } = receiverUser;
-          const title = 'New Friend Request';
-          const message = 'You have received a new friend request!';
-         
-          helper.sendPushNotification(deviceToken, title, message);
-    
-          // Create a notification record in the notification table
-          await db.notification.create({
-            senderId: senderId,
-            receiverId: receiverId,
-            title: title,
-            message: message,
-            read_unread: '0', // Mark as unread
-          });
-        }
-    
-        return helper.success(res, "Friend request sent successfully.", request);
-      } catch (error) {
-        console.error(error);
-      
-      }
-    },
-
-    acceptFriendRequest: async (req, res) => {
-      try {
-        const senderId = req.body.senderId;
-        const receiverId = req.user.id;
-    
-        const existingRequest = await db.chatconstants.findOne({
-          where: {
-            senderId: senderId,
-            receiverId: receiverId,
-            status: 1, // Check for pending requests only
-          },
-        });
-    
-        if (existingRequest) {
-          const updatedStatus = req.body.status == 2 ? 2 : 3; // 2 for accept, 3 for reject
-    
-          // Update the existing request to the specified status
-          await db.chatconstants.update(
-            { status: updatedStatus },
-            {
-              where: {
-                senderId: senderId,
-                receiverId: receiverId,
-                status: 1, // Update only pending requests
-              },
-            }
-          );
-    
-          if (updatedStatus == 2) {
-            // Send a push notification to the sender indicating acceptance
-            const senderUser = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType'],
-            });
-    
-            if (senderUser) {
-              const { deviceToken, deviceType } = senderUser;
-              const title = 'Friend Request Accepted';
-              const message = 'Your friend request has been accepted!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message,);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '0', // Mark as unread
-              });
-            }
-    
-            return helper.success(res, 'Friend request accepted successfully');
-          } else if (updatedStatus == 3) {
-            // Send a push notification to the sender indicating rejection
-            const senderUser = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType'],
-            });
-    
-            if (senderUser) {
-              const { deviceToken, deviceType } = senderUser;
-              const title = 'Friend Request Rejected';
-              const message = 'Your friend request has been rejected!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '1', // Mark as read
-              });
-            }
-    
-            return helper.success(res, 'Friend request rejected successfully');
-          }
-        } else {
-          return helper.error(res, 'No pending friend request found', {});
-        }
-      } catch (error) {
-        console.error(error);
-        // Handle the error appropriately
-        // You may want to return an error response here
-      }
-    },
-  
-// ...
-
-
-
-acceptFriendRequestappandgmail: async (req, res) => {
-      try {
-        const senderId = req.body.senderId;
-        const receiverId = req.user.id;
-    
-        const existingRequest = await db.chatconstants.findOne({
-          where: {
-            senderId: senderId,
-            receiverId: receiverId,
-            status: 1, // Check for pending requests only
-          },
-        });
-    
-        if (existingRequest) {
-          const updatedStatus = req.body.status == 2 ? 2 : 3; // 2 for accept, 3 for reject
-    
-          // Update the existing request to the specified status
-          await db.chatconstants.update(
-            { status: updatedStatus },
-            {
-              where: {
-                senderId: senderId,
-                receiverId: receiverId,
-                status: 1, // Update only pending requests
-              },
-            }
-          );
-    
-          if (updatedStatus == 2) {
-            // Send a push notification to the sender indicating acceptance
-            const senderUser = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType','isNotification'],
-            });
-    
-            if (senderUser.isNotification === 1) {
-              const { deviceToken, deviceType } = senderUser;
-              const title = 'Friend Request Accepted';
-              const message = 'Your friend request has been accepted!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message,);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '0', // Mark as unread
-              });
-            }
-    
-            return helper.success(res, 'Friend request accepted successfully');
-          } else if (updatedStatus == 3) {
-            // Send a push notification to the sender indicating rejection
-            const senderUser = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType','isNotification'],
-            });
-    
-            if (senderUser.isNotification === 1) {
-              const { deviceToken, deviceType } = senderUser;
-              const title = 'Friend Request Rejected';
-              const message = 'Your friend request has been rejected!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '1', // Mark as read
-              });
-            }
-             const senderUser1 = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType','phonenotification'],
-            });
-    if (senderUser1.phonenotification === 1) {
-              const { deviceToken, deviceType } = senderUser;
-              const title = 'Friend Request Accepted';
-              const message = 'Your friend request has been accepted!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message,);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '0', // Mark as unread
-              });
-            }
-    
-            return helper.success(res, 'Friend request accepted successfully');
-          } else if (updatedStatus == 3) {
-            // Send a push notification to the sender indicating rejection
-              const senderUser1 = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType','phonenotification'],
-            });
-       
-            if (senderUser1.phonenotification === 1) {
-              const { deviceToken, deviceType } = senderUser1;
-              const title = 'Friend Request Rejected';
-              const message = 'Your friend request has been rejected!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '1', // Mark as read
-              });
-            }
-           const senderUser2 = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType','gmailnotification'],
-            });
-            if (senderUser2.gmailnotification === 1) {
-              const { deviceToken, deviceType } = senderUser2;
-              const title = 'Friend Request Accepted';
-              const message = 'Your friend request has been accepted!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message,);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '0', // Mark as unread
-              });
-            }
-    
-            return helper.success(res, 'Friend request accepted successfully');
-          } else if (updatedStatus == 3) {
-            // Send a push notification to the sender indicating rejection
-           const senderUser2 = await db.users.findByPk(senderId, {
-              attributes: ['deviceToken', 'deviceType','gmailnotification'],
-            });
-    
-            if (senderUser2.gmailnotification === 1) {
-              const { deviceToken, deviceType } = senderUser2;
-              const title = 'Friend Request Rejected';
-              const message = 'Your friend request has been rejected!';
-              // You need to implement the sendPushNotification function
-              // to send the actual push notification
-              helper.sendPushNotification(deviceToken, title, message);
-    
-              // Create a notification record in the notification table
-              await db.notification.create({
-                senderId: senderId,
-                receiverId: receiverId,
-                title: title,
-                message: message,
-                read_unread: '1', // Mark as read
-              });
-            }
-            return helper.success(res, 'Friend request rejected successfully');
-          }
-        } else {
-          return helper.error(res, 'No pending friend request found', {});
-        }
-      } catch (error) {
-        console.error(error);
-        // Handle the error appropriately
-        // You may want to return an error response here
-      }
-    },
-
-    
-connectrequestlist: async (req, res) => {
-  try {
-    const receiverId = req.user.id; // Sender ID from the token
-
-    const sentRequests = await db.chatconstants.findAll({
-      include: [
-        {
-          model: db.users,
-          as: 'sender1', // Alias for the sender user
-          where: {
-            id: { [Op.not]: receiverId },
-          },
-          attributes: [
-            'id',
-            'first_name',
-            'last_name',
-            'email',
-            'phone',
-            'country',
-            'country_code',
-            'loginTime',
-            'latitude',
-            'longitude',
-            'location_range',
-            'otp',
-            'images',
-            'gender',
-            'dob',
-            'deviceToken',
-            'deviceType',
-            'height',
-            'about',
-            'city',
-            'desired_partner',
-            'ratingtype',
-            'rating',
-            'playingstyle',
-            'dominnant_hand',
-            'country_flag',
-            'social_type',
-            'social_id',
-            'is_online',
-           
-          ],
-        },
-      ],
-      where: {
-        receiverId: receiverId,
-        status: 1, // Filter by status 1 (assuming this represents sent requests)
-      },
-    });
-
-    return helper.success(res, 'Connection request list', sentRequests);
-  } catch (error) {
-    console.error(error);
-  }
-},
-
-
-  
-createtogglenotification: async (req, res) => {
-    try {
-      // Validate request body
-      const required = {
-        notificationtype: req.body.notificationtype,
-        isnotification: req.body.isnotification,
-        messages: req.body.messages,
-        title: req.body.title,
-        read_unread: req.body.read_unread,
-      };
-  
-      const nonRequired = {};
-  
-      const getdata = await helper.vaildObject(required, nonRequired, res);
-      const user_id = req.user.id;
-      let notification = await db.notification.findOne({
-        where: {
-          user_id: user_id,
-        },
-      });
-  
-    //   if (!notification) {
-         notification = await db.notification.create({
-          user_id: user_id,
-          notificationtype: getdata.notificationtype,
-          isnotification: getdata.isnotification,
-          messages: getdata.messages,
-          title: getdata.title,
-          read_unread: getdata.read_unread,
-        });
-   
-      
-  
-      return helper.success(res, 'Notification created/updated successfully', notification);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  },
-
-  delterequest:async(req,res)=>{
-    const senderId = req.user.id
-    const receiverId = req.body.receiverId
-    try {
-        const dlt = await db.chatconstants.destroy({
-            where:{
-                senderId:senderId,
-                receiverId:receiverId
-            }
-        })
-        return helper.success(res,"Request delete successfully")
-    } catch (error) {
-        console.log(error);
-    }
-  },
 
   deleteuseraccount: async (req, res) => {
     const { delete_reason } = req.body; // Assuming you send the delete reason in the request body

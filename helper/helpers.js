@@ -270,7 +270,6 @@ unixTimestamp: function () {
 
 success: function (res, message, body = {}) {
     return res.status(200).json({
-        'success': 1,
         'status': 200,
         'message': message,
         'body': body
@@ -283,7 +282,6 @@ error: function (res, err, body = {}) {
     let status = (typeof err === 'object') ? (err.code) ? err.code : 400 : 400;
     let message = (typeof err === 'object') ? (err.message ? err.message : '') : err;
     res.status(status).json({
-        'success': false,
         'status': status,
         'message': message,
         'body': body
